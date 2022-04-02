@@ -1,0 +1,5 @@
+# dataset folder
+PetImages/
+
+# notebook checkpoints
+.ipynb_ckeckpoints/
