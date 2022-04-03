@@ -1,2 +1,2 @@
-- [] Create script to fetch dataset from microsoft server
+- [x] Create script to fetch dataset from microsoft server
 - [] 
