@@ -2,4 +2,10 @@
 PetImages/
 
 # notebook checkpoints
-.ipynb_ckeckpoints/
+.ipynb_checkpoints
+
+# vscode settings JSON
+.vscode/
+
+# pyc
+*.pyc
