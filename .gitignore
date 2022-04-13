@@ -1,5 +1,6 @@
-# dataset folder
-PetImages/
+# Some datasets in the dataset folder
+dataset/PetImages/
+dataset/img_align_celeba/
 
 # notebook checkpoints
 .ipynb_checkpoints
