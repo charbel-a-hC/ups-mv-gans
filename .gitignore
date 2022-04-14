@@ -2,6 +2,9 @@
 dataset/PetImages/
 dataset/img_align_celeba/
 
+# Logdir for GANS
+gan-logdir/*
+
 # notebook checkpoints
 .ipynb_checkpoints
 
