@@ -13,7 +13,7 @@ from tensorflow import keras
 from tensorflow.keras.utils import Sequence
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras import layers
-
+from tensorflow.keras.callbacks import ModelCheckpoint
 from skimage.io import imread
 from skimage.transform import resize
 
@@ -81,22 +81,27 @@ class DataLoader(Sequence):
 
 
 class SaveImagesCallback(Callback):
-    def __init__(self, logdir):
-        self.logdir = Path(f"{logdir}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+    def __init__(self, logdir, latent_dim, save_freq):
+        self.logdir = Path(f"{logdir}/gan_image_output/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+        self.latent_dim = latent_dim
+        self.save_freq = save_freq
         
         self.logdir.mkdir(exist_ok=True, parents=True)
-        self.fixed_noise = tf.random.normal([batch_size, 1, 1, 128])
+        self.fixed_noise = tf.random.normal([batch_size, 1, 1, self.latent_dim])
         
     def on_epoch_end(self, epoch, logs= None):
-        if epoch % 100 == 0:
+        if epoch % self.save_freq == 0:
             generator = self.model.generator
             predictions = generator(self.fixed_noise, training=False)
-            pred_16_index = np.random.choice(np.array(list(range(predictions.shape[0]))), size= 16)
-            predictions = np.array([predictions[x, :, :, :] for x in pred_16_index])
+            
+            pred_index = np.random.choice(np.array(list(range(predictions.shape[0]))), size= predictions.shape[0])
+            predictions = np.array([predictions[x, :, :, :] for x in pred_index])
 
+            plt_shape = int(np.math.sqrt(predictions.shape[0]))
+            
             fig = plt.figure(figsize=(8, 8))
             for i in range(predictions.shape[0]):
-                plt.subplot(4, 4, i+1)
+                plt.subplot(plt_shape, plt_shape, i+1)
                 plt.imshow(np.asarray(predictions[i, :, :, :] * 127.5 + 127.5, dtype= np.uint8))
                 plt.axis('off')
 
@@ -106,7 +111,7 @@ class SaveImagesCallback(Callback):
 # Create the discriminator
 discriminator = keras.Sequential(
     [
-        keras.Input(shape=(64, 64, 3)),
+        keras.Input(shape=(128, 128, 3)),
         layers.Conv2D(64, (4, 4), strides=(2, 2), padding="same", use_bias= False),
         layers.LeakyReLU(alpha=0.2),
 
@@ -118,6 +123,11 @@ discriminator = keras.Sequential(
         layers.Conv2D(64*4, (4, 4), strides= (2, 2), padding= "same", use_bias= False),
         layers.BatchNormalization(),
         layers.LeakyReLU(alpha= 0.2),
+
+        layers.Conv2D(64*4, (4, 4), strides= (2, 2), padding= "same", use_bias= False),
+        layers.BatchNormalization(),
+        layers.LeakyReLU(alpha= 0.2),
+    
         
         layers.Conv2D(64*8, (4, 4), strides=(2, 2), padding="same", use_bias= False),
         layers.LeakyReLU(alpha=0.2),
@@ -130,15 +140,19 @@ discriminator = keras.Sequential(
 )
 
 # Create the generator
-latent_dim = 128
+latent_dim = 256
 generator = keras.Sequential(
     [
         keras.Input(shape=(1, 1, latent_dim)),
-        layers.Conv2DTranspose(64*8, (4, 4), strides=(1, 1), padding="valid", use_bias= False),
+        layers.Conv2DTranspose(64*16, (4, 4), strides=(1, 1), padding="valid", use_bias= False),
         layers.BatchNormalization(),
         layers.ReLU(),
         
-        layers.Conv2DTranspose(64*4, (4, 4), strides=(2, 2), padding="same", use_bias= False),
+        layers.Conv2DTranspose(64*8, (4, 4), strides=(2, 2), padding="same", use_bias= False),
+        layers.BatchNormalization(),
+        layers.ReLU(),
+
+        layers.Conv2DTranspose(64*8, (4, 4), strides=(2, 2), padding="same", use_bias= False),
         layers.BatchNormalization(),
         layers.ReLU(),
         
@@ -223,10 +237,19 @@ class GAN(keras.Model):
 
 # Prepare the dataset. We use both the training & test MNIST digits.
 batch_size = 4
-train_cat_dog_data = DataLoader(im_dir= "dataset/Newdata/train_merged", resize= True, output_dim= (64, 64, 3), batch_size= batch_size)
+EPOCHS= 30000
+EPOCH_SAVE_FREQ = 500
+
+train_cat_dog_data = DataLoader(im_dir= "dataset/Newdata/train_merged", resize= True, output_dim= (128, 128, 3), batch_size= batch_size)
+
+data_len = len(train_cat_dog_data)
 
 logdir = 'gan-logdir/horses_cows/'
-isaveimg = SaveImagesCallback(logdir= logdir)
+isaveimg = SaveImagesCallback(logdir= logdir, latent_dim= latent_dim, save_freq= 100)
+model_checkpoint = ModelCheckpoint(
+                    filepath= f"{logdir}/model_checkpoint/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
+                    monitor= "g_loss",
+                    save_freq= EPOCH_SAVE_FREQ*batch_size*data_len)
 
 with tf.device('/device:GPU:0'):
     gan = GAN(discriminator=discriminator, generator=generator, latent_dim=latent_dim, batch_size= batch_size)
@@ -248,4 +271,4 @@ with tf.device('/device:GPU:0'):
 
     # To limit the execution time, we only train on 100 batches. You can train on
     # the entire dataset. You will need about 20 epochs to get nice results.
-    gan.fit(train_cat_dog_data, epochs=30000, callbacks= [isaveimg], workers= 10)
+    gan.fit(train_cat_dog_data, epochs=EPOCHS, callbacks= [isaveimg, model_checkpoint], workers= 10)
