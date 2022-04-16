@@ -11,9 +11,9 @@ from pathlib import Path
 
 from tensorflow import keras
 from tensorflow.keras.utils import Sequence
-from tensorflow.keras.callbacks import Callback
+from tensorflow.keras.callbacks import Callback, ModelCheckpoint
 from tensorflow.keras import layers
-from tensorflow.keras.callbacks import ModelCheckpoint
+
 from skimage.io import imread
 from skimage.transform import resize
 
@@ -124,12 +124,23 @@ discriminator = keras.Sequential(
         layers.BatchNormalization(),
         layers.LeakyReLU(alpha= 0.2),
 
-        layers.Conv2D(64*4, (4, 4), strides= (2, 2), padding= "same", use_bias= False),
+        layers.Conv2D(64*8, (4, 4), strides= (2, 2), padding= "same", use_bias= False),
         layers.BatchNormalization(),
         layers.LeakyReLU(alpha= 0.2),
-    
-        
+
         layers.Conv2D(64*8, (4, 4), strides=(2, 2), padding="same", use_bias= False),
+        layers.LeakyReLU(alpha=0.2),
+        layers.BatchNormalization(),    
+        
+        layers.Conv2D(64*4, (4, 4), strides=(2, 2), padding="same", use_bias= False),
+        layers.LeakyReLU(alpha=0.2),
+        layers.BatchNormalization(),
+
+        layers.Conv2D(64*2, (4, 4), strides=(2, 2), padding="same", use_bias= False),
+        layers.LeakyReLU(alpha=0.2),
+        layers.BatchNormalization(),
+        
+        layers.Conv2D(64, (4, 4), strides=(2, 2), padding="same", use_bias= False),
         layers.LeakyReLU(alpha=0.2),
         layers.BatchNormalization(),
         
@@ -140,11 +151,11 @@ discriminator = keras.Sequential(
 )
 
 # Create the generator
-latent_dim = 256
+latent_dim = 512
 generator = keras.Sequential(
     [
         keras.Input(shape=(1, 1, latent_dim)),
-        layers.Conv2DTranspose(64*16, (4, 4), strides=(1, 1), padding="valid", use_bias= False),
+        layers.Conv2DTranspose(64*12, (4, 4), strides=(1, 1), padding="valid", use_bias= False),
         layers.BatchNormalization(),
         layers.ReLU(),
         
@@ -160,11 +171,15 @@ generator = keras.Sequential(
         layers.BatchNormalization(),
         layers.ReLU(),
 
-        layers.Conv2DTranspose(64*2, (4, 4), strides=(2, 2), padding="same", use_bias= False),
+        layers.Conv2DTranspose(64*4, (4, 4), strides=(2, 2), padding="same", use_bias= False),
         layers.BatchNormalization(),
         layers.ReLU(),
 
-        layers.Conv2DTranspose(3, (4, 4), strides=(2, 2), padding="same", activation= "tanh", use_bias= False)
+        layers.Conv2DTranspose(64*2, (4, 4), strides=(2, 2), padding="same", use_bias= False),
+        layers.BatchNormalization(),
+        layers.ReLU(),
+        
+        layers.Conv2D(3, (3, 3), strides=(1, 1), padding="same", use_bias= False, activation= "tanh"), 
     ],
     name="generator",
 )
@@ -238,7 +253,7 @@ class GAN(keras.Model):
 # Prepare the dataset. We use both the training & test MNIST digits.
 batch_size = 4
 EPOCHS= 30000
-EPOCH_SAVE_FREQ = 500
+EPOCH_SAVE_FREQ = 15000
 
 train_cat_dog_data = DataLoader(im_dir= "dataset/Newdata/train_merged", resize= True, output_dim= (128, 128, 3), batch_size= batch_size)
 
@@ -249,7 +264,7 @@ isaveimg = SaveImagesCallback(logdir= logdir, latent_dim= latent_dim, save_freq=
 model_checkpoint = ModelCheckpoint(
                     filepath= f"{logdir}/model_checkpoint/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
                     monitor= "g_loss",
-                    save_freq= EPOCH_SAVE_FREQ*batch_size*data_len)
+                    save_freq= data_len*EPOCH_SAVE_FREQ)
 
 with tf.device('/device:GPU:0'):
     gan = GAN(discriminator=discriminator, generator=generator, latent_dim=latent_dim, batch_size= batch_size)
@@ -271,4 +286,4 @@ with tf.device('/device:GPU:0'):
 
     # To limit the execution time, we only train on 100 batches. You can train on
     # the entire dataset. You will need about 20 epochs to get nice results.
-    gan.fit(train_cat_dog_data, epochs=EPOCHS, callbacks= [isaveimg, model_checkpoint], workers= 10)
+    gan.fit(train_cat_dog_data, epochs=EPOCHS, callbacks= [isaveimg, model_checkpoint], workers= 16)
