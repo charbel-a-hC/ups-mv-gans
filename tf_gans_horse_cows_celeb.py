@@ -1,22 +1,23 @@
-import os
-import glob
-import random
 import datetime
-
-import tensorflow as tf
-import numpy as np
-import matplotlib.pyplot as plt
-
+import glob
+import os
+import random
 from pathlib import Path
 
-from tensorflow import keras
-from tensorflow.keras.utils import Sequence
-from tensorflow.keras.callbacks import Callback, ModelCheckpoint
-from tensorflow.keras import layers
+import wandb
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
 
+from wandb.keras import WandbCallback
 from skimage.io import imread
 from skimage.transform import resize
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.callbacks import Callback, ModelCheckpoint
+from tensorflow.keras.utils import Sequence
 
+wandb.init(project="ups-mv-gans", entity="charbel-abihana")
 
 class DataLoader(Sequence):
     
@@ -106,6 +107,10 @@ class SaveImagesCallback(Callback):
                 plt.axis('off')
 
             plt.savefig(f'{str(self.logdir)}/tf_image_at_epoch_{epoch:04d}.png')
+            
+            img_array = imread(f'{str(self.logdir)}/tf_image_at_epoch_{epoch:04d}.png')
+            images = wandb.Image(img_array, caption= "Generated Images")
+            wandb.log({"generated_images_example": images})
 
 
 # Create the discriminator
@@ -151,7 +156,7 @@ discriminator = keras.Sequential(
 )
 
 # Create the generator
-latent_dim = 512
+latent_dim = 1024
 generator = keras.Sequential(
     [
         keras.Input(shape=(1, 1, latent_dim)),
@@ -251,11 +256,12 @@ class GAN(keras.Model):
 
 
 # Prepare the dataset. We use both the training & test MNIST digits.
-batch_size = 4
+batch_size = 16
 EPOCHS= 30000
-EPOCH_SAVE_FREQ = 15000
+EPOCH_SAVE_FREQ = 30000
 
-train_cat_dog_data = DataLoader(im_dir= "dataset/Newdata/train_merged", resize= True, output_dim= (128, 128, 3), batch_size= batch_size)
+IMAGE_SIZE = (128, 128, 3)
+train_cat_dog_data = DataLoader(im_dir= "dataset/Newdata/train_merged", resize= True, output_dim= IMAGE_SIZE, batch_size= batch_size)
 
 data_len = len(train_cat_dog_data)
 
@@ -276,6 +282,15 @@ with tf.device('/device:GPU:0'):
     
     optimizer_d = keras.optimizers.Adam(learning_rate=lr_schedule)
     optimizer_g = keras.optimizers.Adam(learning_rate= lr_schedule)
+
+    wandb.config = {
+        "learning_rate": lr_schedule,
+        "epochs": EPOCHS,
+        "batch_size": batch_size,
+        "latent_dim": latent_dim,
+        "image_size": IMAGE_SIZE
+    }
+
     gan.compile(
         #d_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
         #g_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
@@ -286,4 +301,4 @@ with tf.device('/device:GPU:0'):
 
     # To limit the execution time, we only train on 100 batches. You can train on
     # the entire dataset. You will need about 20 epochs to get nice results.
-    gan.fit(train_cat_dog_data, epochs=EPOCHS, callbacks= [isaveimg, model_checkpoint], workers= 16)
+    gan.fit(train_cat_dog_data, epochs=EPOCHS, callbacks= [isaveimg, model_checkpoint, WandbCallback()], workers= 16)

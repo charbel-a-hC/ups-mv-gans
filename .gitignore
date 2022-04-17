@@ -2,6 +2,9 @@
 dataset/PetImages/
 dataset/img_align_celeba/
 
+# WANDB logs
+wandb/*
+
 # Logdir for GANS
 gan-logdir/*
 
