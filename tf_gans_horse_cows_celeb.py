@@ -17,11 +17,12 @@ from tensorflow.keras import layers
 from tensorflow.keras.callbacks import Callback, ModelCheckpoint
 from tensorflow.keras.utils import Sequence
 
+wandb.init(project="ups-mv-gans", entity="charbel-abihana")
+
 gpus = tf.config.experimental.list_physical_devices('GPU')
 for gpu in gpus:
   tf.config.experimental.set_memory_growth(gpu, True)
 
-wandb.init(project="ups-mv-gans", entity="charbel-abihana")
 
 class DataLoader(Sequence):
     
