@@ -14,7 +14,7 @@ help:
 env:
 	which poetry | grep . && echo 'poetry installed' || curl -sSL https://install.python-poetry.org | python3.7 -
 	poetry --version
-	poetry env use python3.7
+	poetry env use python3.6.9
 	$(eval VIRTUAL_ENVS_PATH=$(shell poetry env info --path))
 	@echo $(VIRTUAL_ENVS_PATH)
 	poetry install

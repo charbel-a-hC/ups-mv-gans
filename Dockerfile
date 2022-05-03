@@ -20,27 +20,27 @@ RUN apt-key del 7fa2af80 &&\
     wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-keyring_1.0-1_all.deb && \
     dpkg -i cuda-keyring_1.0-1_all.deb 
 
-# Install needed libraries
-#RUN apt-get update && \
-#	apt-get upgrade -y && \
-#	apt-get install -y clang-format wget apt-utils build-essential\
-#	checkinstall cmake pkg-config yasm git vim curl\
-#	autoconf automake libtool libopencv-dev build-essential
+RUN apt update && apt install -y software-properties-common
 
-# Install python-dev and pip
-# Install python dependencies
-RUN apt-get update && apt-get install -y \
-  locales \
-  python3.6 \
-  python3-pip \
-  wget \
-  pkg-config\
-  curl
+# Install System Dependencies
+RUN add-apt-repository ppa:deadsnakes/ppa && \
+    apt update && \
+    apt install -y \
+    python3.6 \
+    python3-pip \
+    python3-venv \
+    git \
+    vim \
+    curl
 
 RUN python3 -m pip install --upgrade pip
-#ENV PATH=/root/.local/bin:$PATH
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV PATH=/root/.local/bin:$PATH
+RUN poetry config virtualenvs.create false
 
-RUN --mount=type=cache,target=/root/.cache/pip pip3 install wandb tensorflow-gpu==2.2 scikit-image matplotlib jupyter
+
 
 WORKDIR /ups-mv-gans-project
-COPY . /ups-mv-gans-project
+COPY pyproject.toml .
+COPY Makefile .
+RUN make env-docker
