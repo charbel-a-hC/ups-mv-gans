@@ -17,6 +17,10 @@ from tensorflow.keras import layers
 from tensorflow.keras.callbacks import Callback, ModelCheckpoint
 from tensorflow.keras.utils import Sequence
 
+gpus = tf.config.experimental.list_physical_devices('GPU')
+for gpu in gpus:
+  tf.config.experimental.set_memory_growth(gpu, True)
+
 wandb.init(project="ups-mv-gans", entity="charbel-abihana")
 
 class DataLoader(Sequence):
@@ -301,4 +305,4 @@ with tf.device('/device:GPU:0'):
 
     # To limit the execution time, we only train on 100 batches. You can train on
     # the entire dataset. You will need about 20 epochs to get nice results.
-    gan.fit(train_cat_dog_data, epochs=EPOCHS, callbacks= [isaveimg, model_checkpoint, WandbCallback()], workers= 16)
+    gan.fit(train_cat_dog_data, epochs=EPOCHS, callbacks= [isaveimg, WandbCallback()], workers= 16)
