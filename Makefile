@@ -10,11 +10,22 @@ help:
 
 
 
+.PHONY: env
+env:
+	which poetry | grep . && echo 'poetry installed' || curl -sSL https://install.python-poetry.org | python3.7 -
+	poetry --version
+	poetry env use python3.7
+	$(eval VIRTUAL_ENVS_PATH=$(shell poetry env info --path))
+	@echo $(VIRTUAL_ENVS_PATH)
+	poetry install
+	poetry show
+
 .PHONY: env-docker
 env-docker:
-	conda env update --prune -f environment.yml
-	conda activate tf2
-
+	which poetry | grep . && echo 'poetry installed' || curl -sSL https://install.python-poetry.org | python3 -
+	poetry --version
+	poetry install
+	poetry show
 
 .PHONY: format
 format:
