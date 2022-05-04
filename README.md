@@ -3,9 +3,9 @@
 ## Infra To-Do
 - [ ] convert notebook to py-scripts
 - [ ] add model/ logs/ main/ ... structure
-- [ ] add Makefile for creating env / docker-env
-- [ ] dockerize the env for GPU training
-- [ ] add wandb monitoring
+- [x] add Makefile for creating env / docker-env
+- [x] dockerize the env for GPU training
+- [x] add wandb monitoring
 - [ ] add tensorboard monitoring
 - [ ] argparser for CLI training automation
 - [ ] Initiate Paper and repo clean build
