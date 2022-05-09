@@ -1,21 +1,49 @@
-import datetime
-import glob
-import os
-import random
-from pathlib import Path
-
-import wandb
-import matplotlib.pyplot as plt
-import numpy as np
 import tensorflow as tf
+import os
+import glob
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+import shutil
+import random
+import itertools
+import math
+import time
+import wandb
+import datetime
 
 from wandb.keras import WandbCallback
 from skimage.io import imread
 from skimage.transform import resize
+
 from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras.callbacks import Callback, ModelCheckpoint
+# Model class
+from tensorflow.keras.models import Model
+
+# Layers
+from tensorflow.keras.layers import LeakyReLU, BatchNormalization, Dropout, Flatten, Conv2D, Dense, MaxPool2D, Conv2DTranspose, GlobalMaxPool2D, Reshape, BatchNormalization, Input
+from tensorflow.keras.layers import Layer
+
+# Optimizer
+from tensorflow.keras.optimizers import Adam
+
+# Loss function
+from tensorflow.keras.losses import BinaryCrossentropy
+
+# Data loader
 from tensorflow.keras.utils import Sequence
+
+# Metrics
+from tensorflow.keras.metrics import BinaryAccuracy, Recall, Precision, MSE
+
+# ImageLoader
+from skimage.io import imread
+
+# Weights Initializer
+from tensorflow.keras.initializers import RandomNormal, GlorotNormal, GlorotUniform
+
+# Callbacks
+from tensorflow.keras.callbacks import Callback, ModelCheckpoint
 
 wandb.init(project="ups-mv-gans", entity="charbel-abihana")
 
@@ -118,7 +146,7 @@ class SaveImagesCallback(Callback):
             wandb.log({"generated_images_example": images})
 
 
-# Create the discriminator
+"""# Create the discriminator
 discriminator = keras.Sequential(
     [
         keras.Input(shape=(128, 128, 3)),
@@ -192,9 +220,119 @@ generator = keras.Sequential(
         layers.Conv2D(3, (3, 3), strides=(1, 1), padding="same", use_bias= False, activation= "tanh"), 
     ],
     name="generator",
-)
+)"""
+class Conv2DTBatchNorm(Layer):
+    def __init__(self, filters, kernel_size, strides, padding, use_bias):
+        super(Conv2DTBatchNorm, self).__init__()
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.strides = strides
+        self.padding = padding
+        self.use_bias = use_bias
+    
+    def build(self, input_shape):
+        self.conv2d_t = Conv2DTranspose(filters= self.filters, kernel_size= self.kernel_size, strides= self.strides, use_bias= self.use_bias)
+        self.batch_norm = BatchNormalization()
+        self.leaky_relu = LeakyReLU()
+        super(Conv2DTBatchNorm, self).build(input_shape)
+    
+    def call(self, input_tensor):
+        x = input_tensor
+        
+        x = self.conv2d_t(x)
+        x = self.batch_norm(x)
+        x = self.leaky_relu(x)
+        
+        return x  
+class Conv2DBatchNorm(Layer):
+    def __init__(self, filters, kernel_size, strides, padding, use_bias, batch_norm= True):
+        super(Conv2DBatchNorm, self).__init__()
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.strides = strides
+        self.padding = padding
+        self.use_bias = use_bias
+        self.batch_norm = batch_norm
+        
+    def build(self, input_shape):
+        self.conv = Conv2D(filters= self.filters, kernel_size= self.kernel_size, strides= self.strides, padding= self.padding, use_bias= self.use_bias)
+        if self.batch_norm:
+            self.bn = BatchNormalization()
+        self.leaky_relu = LeakyReLU(alpha= 0.2)
+        
+        super(Conv2DBatchNorm, self).build(input_shape)
+    
+    def call(self, input_tensor):
+        x = input_tensor
+        x = self.conv(x)
+        if self.batch_norm:
+            x = self.bn(x)
+        x = self.leaky_relu(x)
+        
+        return x
 
-class GAN(keras.Model):
+class Generator(Model):
+    def __init__(self, latent_dim, name, **kwargs):
+        super(Generator, self).__init__(name= name, **kwargs)
+        self.latent_dim = latent_dim
+    
+    def build(self, input_shape):
+        assert input_shape[1:] == (1, 1, self.latent_dim), f"input_shape should have shape (batch_size, 1, 1, latent_dimension), received: {input_shape}"
+        self.conv2d_t_1 = Conv2DTBatchNorm(filters= 64*12, kernel_size= (4, 4), strides=(1, 1), padding="valid", use_bias= False)
+        self.conv2d_t_2 = Conv2DTBatchNorm(filters= 64*8, kernel_size= (2, 2), strides=(2, 2), padding="same", use_bias= False)
+        self.conv2d_t_3 = Conv2DTBatchNorm(filters= 64*8, kernel_size= (2, 2), strides=(2, 2), padding="same", use_bias= False)
+        self.conv2d_t_4 = Conv2DTBatchNorm(filters= 64*4, kernel_size= (2, 2), strides=(2, 2), padding="same", use_bias= False)
+        self.conv2d_t_5 = Conv2DTBatchNorm(filters= 64*4, kernel_size= (2, 2), strides=(2, 2), padding="same", use_bias= False)
+        self.conv2d_t_6 = Conv2DTBatchNorm(filters= 64*2, kernel_size= (2, 2), strides=(2, 2), padding="same", use_bias= False)
+        
+        self.conv2d = Conv2D(filters= 3, kernel_size= (3, 3), strides=(1, 1), padding="same", use_bias= False, activation= "tanh")
+        super(Generator, self).build(input_shape)
+    
+    def call(self, input_tensor):
+        x = input_tensor
+        x = self.conv2d_t_1(x)
+        x = self.conv2d_t_2(x)
+        x = self.conv2d_t_3(x)
+        x = self.conv2d_t_4(x)
+        x = self.conv2d_t_5(x)
+        x = self.conv2d_t_6(x)
+        
+        x = self.conv2d(x)
+        return x
+class Discriminator(Model):
+    def __init__(self, name, **kwargs):
+        super(Discriminator, self).__init__(name, **kwargs)
+    
+    def build(self, input_shape):
+        self.conv1 = Conv2DBatchNorm(filters=64, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, batch_norm= False)
+        
+        self.conv_bn_1 = Conv2DBatchNorm(filters=64*2, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, batch_norm= False)
+        self.conv_bn_2 = Conv2DBatchNorm(filters=64*4, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, batch_norm= False)        
+        self.conv_bn_3 = Conv2DBatchNorm(filters=64*8, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, batch_norm= False)        
+        self.conv_bn_4 = Conv2DBatchNorm(filters=64*8, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, batch_norm= False)        
+        self.conv_bn_5 = Conv2DBatchNorm(filters=64*4, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, batch_norm= False)        
+        self.conv_bn_6 = Conv2DBatchNorm(filters=64*2, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, batch_norm= False)
+        self.conv_bn_7 = Conv2DBatchNorm(filters=64, kernel_size=(4, 4), strides=(2, 2), padding="same", use_bias=False, batch_norm= False)  
+        
+        self.conv2 = Conv2D(1, (3, 3), strides=(4, 4), padding="same", use_bias= False, activation= 'sigmoid')
+        super(Discriminator, self).build(input_shape)
+    
+    def call(self, input_tensor):
+        x = input_tensor
+        x = self.conv1(x)
+        
+        x = self.conv_bn_1(x)
+        x = self.conv_bn_2(x)
+        x = self.conv_bn_3(x)
+        x = self.conv_bn_4(x)
+        x = self.conv_bn_5(x)        
+        x = self.conv_bn_6(x)
+        x = self.conv_bn_7(x)
+        
+        x = self.conv2(x)
+        return x
+
+class GAN(Model):
     def __init__(self, discriminator, generator, latent_dim, batch_size):
         super(GAN, self).__init__()
         self.discriminator = discriminator
@@ -261,41 +399,42 @@ class GAN(keras.Model):
 
 
 # Prepare the dataset. We use both the training & test MNIST digits.
-batch_size = 16
+batch_size = 32
 EPOCHS= 30000
 EPOCH_SAVE_FREQ = 30000
-
+LATENT_DIMENSION = 100
 IMAGE_SIZE = (128, 128, 3)
-train_cat_dog_data = DataLoader(im_dir= "dataset/Newdata/train_merged", resize= True, output_dim= IMAGE_SIZE, batch_size= batch_size)
 
+train_cat_dog_data = DataLoader(im_dir= "dataset/Newdata/train_merged", resize= True, output_dim= IMAGE_SIZE, batch_size= batch_size)
 data_len = len(train_cat_dog_data)
 
 logdir = 'gan-logdir/horses_cows/'
-isaveimg = SaveImagesCallback(logdir= logdir, latent_dim= latent_dim, save_freq= 100)
+isaveimg = SaveImagesCallback(logdir= logdir, latent_dim= LATENT_DIMENSION, save_freq= 100)
 model_checkpoint = ModelCheckpoint(
                     filepath= f"{logdir}/model_checkpoint/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
                     monitor= "g_loss",
                     save_freq= data_len*EPOCH_SAVE_FREQ)
 
-with tf.device('/device:GPU:0'):
-    gan = GAN(discriminator=discriminator, generator=generator, latent_dim=latent_dim, batch_size= batch_size)
+with tf.device('/device:GPU:1'):
+    discriminator = Discriminator(name= "Discriminator")
+    generator = Generator(latent_dim= LATENT_DIMENSION, name= "Generator")
+    gan = GAN(discriminator=discriminator, generator=generator, latent_dim=LATENT_DIMENSION, batch_size= batch_size)
     
     lr_schedule = keras.optimizers.schedules.ExponentialDecay(
     initial_learning_rate=1e-4,
     decay_steps=10000,
     decay_rate=0.9)
     
-    optimizer_d = keras.optimizers.Adam(learning_rate=lr_schedule)
-    optimizer_g = keras.optimizers.Adam(learning_rate= lr_schedule)
+    optimizer_d = keras.optimizers.Adam(0.0002, 0.5)
+    optimizer_g = keras.optimizers.Adam(0.0002, 0.5)
 
     wandb.config = {
         "learning_rate": lr_schedule,
         "epochs": EPOCHS,
         "batch_size": batch_size,
-        "latent_dim": latent_dim,
+        "latent_dim": LATENT_DIMENSION,
         "image_size": IMAGE_SIZE
     }
-
     gan.compile(
         #d_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
         #g_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
@@ -303,7 +442,4 @@ with tf.device('/device:GPU:0'):
         g_optimizer= optimizer_g,
         loss_fn=keras.losses.BinaryCrossentropy(),
     )
-
-    # To limit the execution time, we only train on 100 batches. You can train on
-    # the entire dataset. You will need about 20 epochs to get nice results.
     gan.fit(train_cat_dog_data, epochs=EPOCHS, callbacks= [isaveimg, WandbCallback()], workers= 16)

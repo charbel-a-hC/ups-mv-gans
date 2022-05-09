@@ -37,3 +37,7 @@ clean: # Remove Python file artifacts
 	find . -name '*.pyo' -exec rm -rf {} +
 	find . -name '*~' -exec rm -rf {} +
 	find . -name '__pycache__' -exec rm -fr {} +
+
+.PHONY: run-docker-jupyter
+run-docker-jupyter:
+	

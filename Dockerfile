@@ -2,6 +2,7 @@ FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
 #FROM tensorflow/tensorflow:2.2.2-gpu-jupyter
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG USE_JUPYTER
 
 # To save you a headache
 ENV LC_ALL=C.UTF-8
@@ -44,3 +45,6 @@ WORKDIR /ups-mv-gans-project
 COPY pyproject.toml .
 COPY Makefile .
 RUN make env-docker
+
+#ENTRYPOINT if [ ${USE_JUPYTER} == "1" ]; then jupyter notebook --ip 0.0.0.0 --port 8000 --allow-root; else echo "Image built without Jupyter Notebook Entrypoint."; fi
+#ENTRYPOINT [ "jupyter", "notebook", "--ip", "0.0.0.0", "--port", "8888", "--allow-root"]
