@@ -6,8 +6,8 @@ authors = ["Charbel Abi Hana <charbel-a-h@outlook.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.6.9"
-tensorflow-gpu = "2.2.0"
-numpy = "1.19.5"
+tensorflow-gpu = "2.3"
+numpy = "1.18"
 wandb = "0.12.16"
 scikit-image = "0.17.2"
 jupyter = "1.0.0"
