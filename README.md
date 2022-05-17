@@ -12,7 +12,7 @@
 
 Clone and `cd` in the repository before running any of the commands:
 ```bash
-git clone 
+git clone https://github.com/charbel-a-hC/ups-mv-gans.git
 cd ups-mv-gans
 ```
 You also need to install `python3` locally if you wish to run the notebook on a **local** environment. This automatically install `python3.6.9`. For Ubuntu:
