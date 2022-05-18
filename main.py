@@ -10,9 +10,9 @@ from tensorflow.keras.losses import BinaryCrossentropy
 
 from training.data_pre_processing import DataLoader
 from training.models.classification import Classifier
-from training.models.CGAN import CDiscriminator, CGenerator, CGAN
-from training.models.DCGAN import Generator, Discriminator, DCGAN
-from training.models.CycleGAN import CycleGAN
+from training.models.cgan import CDiscriminator, CGenerator, CGAN
+from training.models.dcgan import Generator, Discriminator, DCGAN
+from training.models.cycle_gan import CycleGAN
 
 from training.callbakcs import SaveImagesCallbackDCGAN, CycleGANMonitor
 
