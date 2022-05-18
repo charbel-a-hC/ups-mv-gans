@@ -1,1 +1,2 @@
 from .Conv2DTBatchNorm import Conv2DTBatchNorm
+from .Conv2DBatchNorm import Conv2DBatchNorm
