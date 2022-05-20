@@ -58,4 +58,4 @@ conda activate base
 ```
 
 ### Google Colaboratory
-You can run the notebook in a Google Colaboratory instance. 
+You can open the notebook in Google Colab here: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]()
