@@ -41,7 +41,7 @@ RUN poetry config virtualenvs.create false
 
 
 
-WORKDIR /ups-mv-gans-project
+WORKDIR /ups-mv-gans
 COPY pyproject.toml .
 COPY Makefile .
 RUN make env-docker
