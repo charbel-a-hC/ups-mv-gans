@@ -21,3 +21,7 @@ gan-logdir/*
 data/*/*.aux
 data/*/*.log
 data/*/*.synctex.gz
+data/*/*.bbl
+data/*/*.blg
+data/*/*.fdb_latexmk
+data/*/*.fls
