@@ -16,3 +16,8 @@ gan-logdir/*
 
 # pyc
 *.pyc
+
+# LaTex Files
+data/*/*.aux
+data/*/*.log
+data/*/*.synctex.gz
