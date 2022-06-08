@@ -4,6 +4,8 @@
 - [ ] add tensorboard monitoring
 - [ ] argparser for CLI training automation
 - [ ] Setup google colab instace
+- [ ] Setup TF for RTX3070
+- [ ] Edit Dockerfile cudnn/CUDA versions
 
 ## Environment Setup
 
