@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ups-mv-gans-project"
 version = "0.1.0"
-description = ""
+description = "Implementation of DCGAN, CGAN and CyclicGAN for classification task"
 authors = ["Charbel Abi Hana <charbel-a-h@outlook.com>"]
 
 [tool.poetry.dependencies]
