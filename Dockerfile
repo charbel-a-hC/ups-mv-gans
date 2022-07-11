@@ -1,5 +1,5 @@
-#FROM nvidia/cuda:11.2.1-cudnn8-devel-ubuntu18.04
-FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+FROM nvidia/cuda:11.2.1-cudnn8-devel-ubuntu18.04
+#FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG USE_JUPYTER
@@ -27,7 +27,7 @@ RUN apt update && apt install -y software-properties-common
 RUN add-apt-repository ppa:deadsnakes/ppa && \
     apt update && \
     apt install -y \
-    python3.6 \
+    python3.7 \
     python3-pip \
     python3-venv \
     git \
@@ -45,6 +45,3 @@ WORKDIR /ups-mv-gans
 COPY pyproject.toml .
 COPY Makefile .
 RUN make env-docker
-
-#ENTRYPOINT if [ ${USE_JUPYTER} == "1" ]; then jupyter notebook --ip 0.0.0.0 --port 8000 --allow-root; else echo "Image built without Jupyter Notebook Entrypoint."; fi
-#ENTRYPOINT [ "jupyter", "notebook", "--ip", "0.0.0.0", "--port", "8888", "--allow-root"]
